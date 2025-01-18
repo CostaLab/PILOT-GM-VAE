@@ -1,0 +1,9 @@
+# Exclude Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Exclude Python cache files
+__pycache__/
+
+# Optional: Exclude compiled Python files
+*.pyc
+*.pyo
