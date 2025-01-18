@@ -1,5 +1,0 @@
-*.py linguist-language=Python
-*.ipynb linguist-language=Jupyter Notebook
-*.ipynb linguist-generated=true
-*.R linguist-language=R
-*.r linguist-language=R
