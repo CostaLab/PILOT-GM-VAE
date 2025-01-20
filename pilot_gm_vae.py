@@ -1283,7 +1283,7 @@ def get_noised_curves(adata: ad.AnnData = None,
 
 def go_enrichment_heatmap(adata, num_gos=10, fontsize=16, figsize=(15, 12), cmap='Blues', cmap_max=5, dpi=100, 
                           bbox_inches='tight', facecolor='white', transparent=False, organism='hsapiens', 
-                          p_threshold=0.05, filter_go='skin',row_cluster=True,col_cluster=False, method='average',metric='euclidean',z_score=1,dendrogram_ratio=(0.2, 0.2),linewidths=0.5, path = 'Results_PILOT/GO/heatmaps/',convert_names=False):
+                          p_threshold=0.05, filter_go='skin',row_cluster=True,col_cluster=False, method='average',metric='euclidean',z_score=1,dendrogram_ratio=(0.2, 0.2),linewidths=0.5, path = 'Results_PILOT/GO/heatmaps/',convert_names=False,source_filter='GO:'):
     """
     Performs Gene Ontology (GO) enrichment analysis for clusters and generates a heatmap of enriched terms.
 
@@ -1357,6 +1357,9 @@ def go_enrichment_heatmap(adata, num_gos=10, fontsize=16, figsize=(15, 12), cmap
 
     convert_names : bool, optional
         Whether to convert Ensembl IDs to gene names using an external API. Default is False.
+    
+    source_filter : str, optional
+        Filter for the 'source' column in GProfiler results. Only terms containing this value are included. Default is 'GO:'.
 
     Returns
     -------
@@ -1422,7 +1425,9 @@ def go_enrichment_heatmap(adata, num_gos=10, fontsize=16, figsize=(15, 12), cmap
             
 
         # Filter GO terms based on p-value threshold
-        gprofiler_results = gprofiler_results[gprofiler_results['p_value'] < p_threshold]
+        gprofiler_results = gprofiler_results[
+            (gprofiler_results['p_value'] < p_threshold) &
+            (gprofiler_results['source'].str.contains(source_filter, case=False))]
         if gprofiler_results.empty:
             print(f"No significant GO terms found for cluster {cluster}. Skipping.")
             continue
@@ -1514,8 +1519,11 @@ def results_gene_cluster_differentiation(cluster_name=None,sort_columns=['pvalue
     df=df[df['FC'] > threshold]
     df['pvalue']=df['pvalue'].astype(float)
     df=df[df['pvalue'] < p_value]
-    df_sorted = df.sort_values(by=sort_columns, ascending=ascending)
+    
+   
     if converter:
+        df['Ens_ID']=list(df['gene'])
+        df_sorted = df.sort_values(by=sort_columns, ascending=ascending)
         genes=pd.read_csv('Results_PILOT/gene_clusters_stats_extend.csv')
         url = "https://biotools.fr/human/ensembl_symbol_converter/"
         ids = list(genes['gene'])
@@ -1529,7 +1537,8 @@ def results_gene_cluster_differentiation(cluster_name=None,sort_columns=['pvalue
         output = json.loads(response.text)
         output= pd.DataFrame(list(output.items()), columns=['Ensembl ID', 'Gene Name'])
         df_sorted['gene'] = df_sorted['gene'].map(output.set_index('Ensembl ID')['Gene Name'])
-        return df_sorted[['gene','cluster','waldStat','pvalue','FC','Expression pattern','fit-pvalue','fit-mod-rsquared']] 
+        return df_sorted[['gene','cluster','waldStat','pvalue','FC','Expression pattern','fit-pvalue','fit-mod-rsquared','Ens_ID']] 
     else:
+        df_sorted = df.sort_values(by=sort_columns, ascending=ascending)
         return df_sorted[['gene','cluster','waldStat','pvalue','FC','Expression pattern','fit-pvalue','fit-mod-rsquared']] 
        
