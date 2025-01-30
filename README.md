@@ -8,7 +8,7 @@ We introduce here PatIent-Level Analysis with Optimal Transport based on Gausian
 
 
 
-![plot](./img/plot.png)
+![plot](./img/plot1.png)
 
 ```terminal
 git clone https://github.com/CostaLab/PILOT-GM-VAE.git
