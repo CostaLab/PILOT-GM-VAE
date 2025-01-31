@@ -6,11 +6,8 @@
 PILOT-GM-VAE
 
 """
-from pilotpy.tools import *
-from pilotpy.plot import *
-import json
-import requests
-import matplotlib.pyplot as plt
+from PILOT.tools import *
+from PILOT.plot import *
 import scanpy as sc
 import time
 from joblib import Parallel, delayed
@@ -21,27 +18,15 @@ import random
 import numpy as np
 import torch
 import time
-from anndata import AnnData
-seed_value = 42
-torch.manual_seed(seed_value)
-torch.cuda.manual_seed(seed_value)
-torch.cuda.manual_seed_all(seed_value)  # If you are using multi-GPU.
-np.random.seed(seed_value)
-random.seed(seed_value)
-# Disable non-deterministic algorithms for CUDA if using GPU
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
+from anndata import AnnData 
 import os
 import scipy.linalg as spl
-# Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # 0 = all logs, 1 = filter out INFO logs, 2 = filter out WARNING logs, 3 = filter out ERROR logs
+import numpy as np
+from joblib import Parallel, delayed
 from numba import njit, prange
 import scipy.linalg
 import warnings
-import anndata as ad
-#from tensorflow.python.ops.numpy_ops import np_config
-#np_config.enable_numpy_behavior()
-
 warnings.filterwarnings('ignore', category=UserWarning)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 from sklearn.covariance import LedoitWolf
@@ -50,18 +35,23 @@ import torch.optim as optim
 import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
 import random
-#from torchvision import datasets, transforms
+from torchvision import datasets, transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 import torch.utils.data
 from scipy.io import loadmat
 from model.GMVAE import *
 from model.GMVAE import GMVAE
+import matplotlib.pyplot as plt
+import scanpy as sc
+import torch
 from torch.utils.data import DataLoader, TensorDataset, SubsetRandomSampler
 from argparse import Namespace
 import os
 import pandas as pd
+import matplotlib.pyplot as plt
 import seaborn as sns
-
+import scanpy as sc
+import anndata as ad
 
 def train_gmvae(
     adata,
@@ -69,9 +59,9 @@ def train_gmvae(
     pca_key='X_pca',
     labels_column=None,
     train_proportion=0.8,
-    batch_size=512,
+    batch_size=32,
     batch_size_val=200,
-    seed=42,
+    seed=1,
     epochs=50,
     learning_rate=1e-3,
     decay_epoch=-1,
@@ -232,27 +222,20 @@ def train_gmvae(
         if save_model:
             torch.save(gmvae.network.state_dict(), model_path)
             print(f"Saved trained model weights to {model_path}.")
-    
-    # Perform inference
+   
     print("Performing inference...")
     z_latent, x_recon, cluster_probs, clusters = gmvae.infer(whole_loader)
-    
-    adata.obsm['z_laten'] = z_latent
-    adata.obsm['weights'] = cluster_probs
-    adata.obsm['x_prim']=x_recon
-    adata.obs['cluster_assignments_by_model_before_gmm']=clusters
-    adata.obs['component_assignment'] = np.nan
     if apply_gmm:
         gmm_clusters = GaussianMixture(n_components=num_classes)
         cluster_assignments = gmm_clusters.fit_predict(cluster_probs)
         adata.obs['component_assignment'] = cluster_assignments+1
         adata.obs['component_assignment'] = adata.obs['component_assignment'].astype(str)
-    else:
-        adata.obs['component_assignment'] = clusters+1
-        adata.obs['component_assignment'] = adata.obs['component_assignment'].astype(str)
-        
+    adata.obsm['z_laten'] = z_latent
+    adata.obsm['weights'] = cluster_probs
+    adata.obsm['x_prim']=x_recon
+    adata.obs['cluster_assignments_by_model_before_gmm']=cluster_assignments
     print("Done!")
-    return gmvae
+   
 
 
 
@@ -315,6 +298,7 @@ def plot_umap_and_stacked_bar(
     #adata.obs[component_col] = adata.obs[component_col].astype(str)
 
     # Set default palette if none is provided
+    adata.obs['component_assignment'] = adata.obs['component_assignment'].astype(str)
     if palette_name is None:
         palette = sns.color_palette("Set1", 9) + sns.color_palette("Set2", 8) + sns.color_palette("Set3", 12) + sns.color_palette("Dark2", 4)
         palette = palette[:33]  # Limit the palette to exactly 33 colors
@@ -375,46 +359,59 @@ def plot_umap_and_stacked_bar(
     plt.tight_layout()
     plt.show()
 
+
 def compute_distance(k, l, m_s, m_t, C_s, C_t, covariance_type, log=False,epsilon = 1e-3):
+    
     """
     Computes the Bures-Wasserstein distance between components k and l of GMMs.
 
     Args:
     - k (int): 
-        Index of the component in GMM `s` for which the distance is computed.
+        Index of the component in GMM s for which the distance is computed.
 
     - l (int): 
-        Index of the component in GMM `t` for which the distance is computed.
+        Index of the component in GMM t for which the distance is computed.
 
     - m_s (numpy.ndarray): 
-        Mean vectors of GMM `s` with shape [num_components_s, dim], where each row corresponds to the mean vector of a GMM component.
+        Mean vectors of GMM s with shape [num_components_s, dim], where each row corresponds to the mean vector of a GMM component.
 
     - m_t (numpy.ndarray): 
-        Mean vectors of GMM `t` with shape [num_components_t, dim], where each row corresponds to the mean vector of a GMM component.
+        Mean vectors of GMM t with shape [num_components_t, dim], where each row corresponds to the mean vector of a GMM component.
 
     - C_s (numpy.ndarray): 
-        Covariance matrices of GMM `s`. Shape is [num_components_s, dim] for `diag` covariance or 
-        [num_components_s, dim, dim] for `full` covariance.
+        Covariance matrices of GMM s. Shape is [num_components_s, dim] for diag covariance or 
+        [num_components_s, dim, dim] for full covariance.
 
     - C_t (numpy.ndarray): 
-        Covariance matrices of GMM `t`. Shape is [num_components_t, dim] for `diag` covariance or 
-        [num_components_t, dim, dim] for `full` covariance.
+        Covariance matrices of GMM t. Shape is [num_components_t, dim] for diag covariance or 
+        [num_components_t, dim, dim] for full covariance.
 
     - covariance_type (str): 
         Specifies the type of covariance matrix. Accepted values are:
-        - `'diag'`: Indicates diagonal covariance matrices.
-        - `'full'`: Indicates full covariance matrices.
+        - 'diag': Indicates diagonal covariance matrices.
+        - 'full': Indicates full covariance matrices.
 
     - log (bool, optional): 
-        If `True`, enables logging of intermediate steps in the Bures-Wasserstein computation. Default is `False`.
+        If True, enables logging of intermediate steps in the Bures-Wasserstein computation. Default is False.
 
     - epsilon (float, optional): 
         A small positive value added to the diagonal elements of covariance matrices to ensure numerical stability. 
-        Default is `1e-3`.
+        Default is 1e-3.
 
     Returns:
     - float: 
-        The Bures-Wasserstein distance between component `k` of GMM `s` and component `l` of GMM `t`.
+        The Bures-Wasserstein distance between component k of GMM s and component l of GMM t.
+
+    Raises:
+    - ValueError: 
+        If covariance_type is not 'diag' or 'full'.
+    
+    - RuntimeError: 
+        If the computed Bures-Wasserstein distance returns NaN values after multiple attempts.
+
+    Notes:
+    - If the covariance matrices are diagonal, they are converted into full diagonal matrices.
+    - If numerical instability is detected (NaN values in the computed distance), epsilon is reduced iteratively to stabilize computations.
     """
     
     ms_k = m_s[k, :]  # Mean vector of component k in GMM s
@@ -449,52 +446,78 @@ def compute_distance(k, l, m_s, m_t, C_s, C_t, covariance_type, log=False,epsilo
     return bures_wasserstein
 
 
-def compute_emd(i, j, samples_id, EMD, adata, compute_distance, ot,covariance_type,wass_dis,epsilon = 1e-3,log=False):
+
+def compute_emd(i, j, samples_id, EMD, adata, compute_distance, ot, log, covariance_type, alpha, beta, use_covariance, use_bures_wasserstein, wass_dis,epsilon = 1e-3):
+    
     """
-    Computes the Earth Mover's Distance (EMD) between two samples represented as Gaussian Mixture Models (GMMs).
+    Computes the Earth Mover's Distance (EMD) between two GMM representations in single-cell data.
 
     Args:
     - i (int): 
-        Index of the first sample in the sample list (`samples_id`).
+        Index of the first sample in the `samples_id` list.
 
     - j (int): 
-        Index of the second sample in the sample list (`samples_id`).
+        Index of the second sample in the `samples_id` list.
 
     - samples_id (list): 
-        A list of unique sample identifiers.
+        List of sample identifiers.
 
     - EMD (numpy.ndarray): 
-        A pre-allocated square matrix to store computed EMD values between sample pairs.
+        A symmetric matrix storing precomputed EMD values.
 
     - adata (AnnData): 
-        Annotated data object containing GMM representations for each sample under `adata.uns['GMVAE_Representation']`.
+        AnnData object containing `GMVAE_Representation` in `.uns`, where each sample has 
+        means, covariances, and weights of the Gaussian Mixture Model (GMM).
 
     - compute_distance (function): 
-        Function to compute the pairwise Bures-Wasserstein distances between GMM components.
+        A function that computes pairwise distances between GMM components using a specified metric.
 
     - ot (module): 
-        Optimal transport library used for computing EMD.
+        Optimal Transport (OT) library used for EMD computation.
+
+    - log (bool): 
+        If True, enables logging of intermediate steps in distance computation.
 
     - covariance_type (str): 
-        Specifies the type of covariance matrix for GMM components. Accepted values are:
-        - `'diag'`: Diagonal covariance.
-        - `'full'`: Full covariance.
+        Specifies the type of covariance matrix. Accepted values are:
+        - 'diag': Indicates diagonal covariance matrices.
+        - 'full': Indicates full covariance matrices.
 
-    - wass_dis (bool): 
-        Flag to indicate whether Wasserstein distance-based computation is enabled.
+    - alpha (float): 
+        Unused parameter (potentially for regularization or weighting).
+
+    - beta (float): 
+        Unused parameter (potentially for regularization or weighting).
+
+    - use_covariance (bool): 
+        Unused parameter (potentially for including covariance information in the computation).
+
+    - use_bures_wasserstein (bool): 
+        Unused parameter (potentially for using the Bures-Wasserstein distance instead of a standard metric).
+
+    - wass_dis (float): 
+        Unused parameter (potentially for storing Wasserstein distance results).
 
     - epsilon (float, optional): 
-        Small positive value added to covariance matrices to ensure numerical stability. Default is `1e-3`.
-
-    - log (bool, optional): 
-        If `True`, enables logging during the computation of distances. Default is `False`.
+        A small positive value added to the diagonal elements of covariance matrices to ensure numerical stability. 
+        Default is 1e-3.
 
     Returns:
     - tuple or None: 
-        A tuple `(i, j, w_d)` containing the indices of the samples and the computed EMD value if successful. 
-        Returns `None` if the pair is invalid (e.g., same sample or already computed).
+        If the computation is performed, returns a tuple (i, j, w_d), where:
+        - `i` (int): Index of the first sample.
+        - `j` (int): Index of the second sample.
+        - `w_d` (float): Computed Earth Mover’s Distance (EMD) between the two samples.
+        If `s == t` (same sample) or EMD is already computed, returns `None`.
+
+    Notes:
+    - If `s == t`, the function skips computation to avoid redundant calculations.
+    - If EMD[i, j] is already computed, the function returns `None`.
+    - Uses `Parallel(n_jobs=-1)` to compute pairwise component distances in parallel.
+    - The resulting EMD is stored **symmetrically** in the matrix `EMD[i, j]` and `EMD[j, i]`.
     """
 
+    
     s = samples_id[i]
     t = samples_id[j]
     if s == t:
@@ -536,107 +559,155 @@ def compute_emd(i, j, samples_id, EMD, adata, compute_distance, ot,covariance_ty
 
 
 
-
 def gmmvae_wasserstein_distance(adata,emb_matrix='X_PCA',
 clusters_col='component_assignment',sample_col='sampleID',status='status',
                               metric='cosine',
-                            
+                                dirich=True,
+                                model_name='model',
                                regulizer=0.2,normalization=True,
                                regularized='unreg',reg=0.1,
-                               res=0.01,steper=0.01,data_type='scRNA',
-                 return_sil_ari=False,random_state=2,covariance_type='full',wass_dis=True,epsilon = 1e-4,n_neighbors=15,resolution=0.5,log=False):
+                               res=0.01,lr=1e-6,steper=0.01,data_type='scRNA',
+                                return_sil_ari=False,training=True,num_components=4,random_state=2,hidden_dim=5,batch_size=None,num_epoc=50,covariance_type='full',clustering_method='gmm',min_samples_for_gmm=0,wass_dis=True,epsilon = 1e-4,use_covariance=True,alpha=1, beta=0.2,use_bures_wasserstein=True,log=False,alpha_dirichlet=None,n_neighbors=15,resolution=0.5,apply_gmm=False):
     
     
     """
-    Computes the GMM-VAE Wasserstein distance matrix for the given AnnData object and optionally computes clustering metrics.
+    Computes the GMMVAE-based Wasserstein distance between samples using the Earth Mover's Distance (EMD)
+    and Gaussian Mixture Variational Autoencoder (GMVAE) representations.
 
     Args:
     - adata (AnnData): 
-        Annotated data object containing the single-cell or similar data. Assumes specific keys in `adata.uns` 
-        and `adata.obs` for proper functioning.
+        An AnnData object containing scRNA-seq or other omics data.
 
     - emb_matrix (str, optional): 
-        Key in `adata.obsm` for the embedding matrix (default: `'X_PCA'`).
+        The key in `adata.obsm` representing the embedding matrix. Default is 'X_PCA'.
 
     - clusters_col (str, optional): 
-        Column in `adata.obs` that contains cluster assignments (default: `'component_assignment'`).
+        The column name in `adata.obs` that contains cluster assignments. Default is 'component_assignment'.
 
     - sample_col (str, optional): 
-        Column in `adata.obs` representing sample identifiers (default: `'sampleID'`).
+        The column name in `adata.obs` that contains sample IDs. Default is 'sampleID'.
 
     - status (str, optional): 
-        Column in `adata.obs` representing the status of the samples (e.g., condition or treatment; default: `'status'`).
+        The column name in `adata.obs` that represents metadata status (e.g., disease vs. control). Default is 'status'.
 
     - metric (str, optional): 
-        Distance metric to use in clustering and silhouette calculations (default: `'cosine'`).
+        The distance metric to be used in clustering. Default is 'cosine'.
+
+    - dirich (bool, optional): 
+        Whether to use Dirichlet priors in GMVAE. Default is True.
+
+    - model_name (str, optional): 
+        Name of the GMVAE model used for clustering. Default is 'model'.
 
     - regulizer (float, optional): 
-        Regularization parameter for optional steps in distance calculation (default: `0.2`).
+        Regularization strength for GMVAE. Default is 0.2.
 
     - normalization (bool, optional): 
-        Whether to normalize distances or other data (default: `True`).
+        Whether to normalize data before clustering. Default is True.
 
     - regularized (str, optional): 
-        Specifies the type of regularization to use (default: `'unreg'`).
+        Type of regularization ('unreg' or other). Default is 'unreg'.
 
     - reg (float, optional): 
-        Regularization parameter for optimal transport (default: `0.1`).
+        Additional regularization parameter. Default is 0.1.
 
     - res (float, optional): 
-        Resolution parameter for clustering (default: `0.01`).
+        Resolution parameter for clustering. Default is 0.01.
+
+    - lr (float, optional): 
+        Learning rate for GMVAE training. Default is 1e-6.
 
     - steper (float, optional): 
-        Step size for resolution in clustering (default: `0.01`).
+        Step size for clustering. Default is 0.01.
 
     - data_type (str, optional): 
-        Type of data being processed (e.g., `'scRNA'`; default: `'scRNA'`).
+        Type of data being analyzed ('scRNA' or other). Default is 'scRNA'.
 
     - return_sil_ari (bool, optional): 
-        If `True`, computes silhouette and adjusted Rand index (ARI) for clustering (default: `False`).
+        Whether to compute silhouette and ARI scores for clustering. Default is False.
+
+    - training (bool, optional): 
+        Whether to train the GMVAE model. Default is True.
+
+    - num_components (int, optional): 
+        Number of Gaussian components in GMVAE. Default is 4.
 
     - random_state (int, optional): 
-        Random state for reproducibility (default: `2`).
+        Random seed for reproducibility. Default is 2.
+
+    - hidden_dim (int, optional): 
+        Dimensionality of hidden layers in GMVAE. Default is 5.
+
+    - batch_size (int, optional): 
+        Batch size for GMVAE training. Default is None.
+
+    - num_epoc (int, optional): 
+        Number of epochs for GMVAE training. Default is 50.
 
     - covariance_type (str, optional): 
-        Type of covariance for GMMs. Options are `'diag'` (diagonal) or `'full'` (full covariance; default: `'full'`).
+        Type of covariance used in GMM ('full' or 'diag'). Default is 'full'.
+
+    - clustering_method (str, optional): 
+        The clustering method used ('gmm' or other). Default is 'gmm'.
+
+    - min_samples_for_gmm (int, optional): 
+        Minimum samples required for GMM clustering. Default is 0.
 
     - wass_dis (bool, optional): 
-        If `True`, computes Wasserstein distance for the GMM representations (default: `True`).
+        Whether to compute Wasserstein distance. Default is True.
 
     - epsilon (float, optional): 
-        Small value added to covariance matrices for numerical stability (default: `1e-4`).
+        Small numerical stability parameter. Default is 1e-4.
 
-    - n_neighbors (int, optional): 
-        Number of neighbors for clustering resolution (default: `15`).
+    - use_covariance (bool, optional): 
+        Whether to include covariance information in calculations. Default is True.
 
-    - resolution (float, optional): 
-        Resolution for Louvain or Leiden clustering (default: `0.5`).
+    - alpha (float, optional): 
+        Alpha parameter for GMVAE training. Default is 1.
+
+    - beta (float, optional): 
+        Beta parameter for GMVAE training. Default is 0.2.
+
+    - use_bures_wasserstein (bool, optional): 
+        Whether to use Bures-Wasserstein distance. Default is True.
 
     - log (bool, optional): 
-        If `True`, logs additional information during distance computation (default: `False`).
+        If True, enables logging for distance computation. Default is False.
+
+    - alpha_dirichlet (float, optional): 
+        Alpha parameter for Dirichlet priors. Default is None.
+
+    - n_neighbors (int, optional): 
+        Number of neighbors for clustering. Default is 15.
+
+    - resolution (float, optional): 
+        Resolution parameter for clustering. Default is 0.5.
+
+    - apply_gmm (bool, optional): 
+        Whether to apply GMM for clustering. Default is False.
 
     Returns:
-    - Updates the following in `adata.uns`:
-        - `'Datafame'`: DataFrame with PCA results and metadata.
-        - `'GMVAE_Representation'`: GMM representations (means, covariances, weights).
-        - `'EMD_df'`: DataFrame with the Earth Mover's Distance (EMD) between samples.
-        - `'EMD'`: Numpy array containing the EMD matrix.
-        - `'Sil'`: Silhouette score (if `return_sil_ari` is `True`).
-        - `'ARI'`: Adjusted Rand Index (ARI) score (if `return_sil_ari` is `True`).
-        - `'real_labels'`: True labels for samples (for clustering evaluation).
-        - `'proportions'`: Cluster proportions based on annotations.
+    - None: 
+        Stores computed **Wasserstein distances (EMD)** and **clustering results** in `adata.uns`.
 
     Notes:
-    - Requires GMM-VAE representations to be computed beforehand if `wass_dis` is `True`.
-    - The function supports parallel computation for efficiency in large datasets.
+    - Extracts PCA or raw data based on `data_type` and prepares it for GMVAE clustering.
+    - Computes Gaussian Mixture Variational Autoencoder (GMVAE) representations and stores them in `adata.uns`.
+    - Uses **Earth Mover’s Distance (EMD)** to measure distances between GMM components across samples.
+    - Stores **EMD matrix and clustering results** in `adata.uns`.
     """
 
 
-    num_components=len(adata.obs['component_assignment'].unique())
-    data,annot=extract_data_anno_scRNA_from_h5ad(adata,emb_matrix=emb_matrix,
-    clusters_col=clusters_col,sample_col=sample_col,status=status)
-    pca_results_df = pd.DataFrame(adata.obsm[emb_matrix]).reset_index(drop=True)
 
+    if data_type=='scRNA':
+        data,annot=extract_data_anno_scRNA_from_h5ad(adata,emb_matrix=emb_matrix,
+        clusters_col=clusters_col,sample_col=sample_col,status=status)
+        pca_results_df = pd.DataFrame(adata.obsm[emb_matrix]).reset_index(drop=True)
+    else:
+        data,annot=extract_data_anno_pathomics_from_h5ad(adata,var_names=list(adata.var_names),clusters_col=clusters_col,sample_col=sample_col,status=status)
+        pca_results_df = pd.DataFrame(adata.X).reset_index(drop=True)
+       
+    
     adata.uns['annot']=annot
     sample_ids = adata.obs[sample_col].reset_index(drop=True)
     cell_subtypes = adata.obs[clusters_col].reset_index(drop=True)
@@ -657,9 +728,9 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
     # Rename the columns using the dictionary
     combined_pca_df.rename(columns=rename_dict, inplace=True)                                                                                            
         #combined_pca_df.columns[-3:]=['cell_type','sampleID','status']
-    adata.uns['Datafame'] = combined_pca_df
+    adata.uns['Datafame_for_use'] = combined_pca_df
     if wass_dis:
-        gmmvae_Representation(adata, sample_col=sample_col,covariance_type=covariance_type,n_neighbors=n_neighbors,resolution=resolution,num_components=num_components)
+        Gaussian_Mixture_VAE_Representation(adata, random_state=random_state,num_components=num_components,hidden_dim=hidden_dim, dirich=dirich,num_epochs=num_epoc,alpha=alpha_dirichlet,sample_col=sample_col,covariance_type=covariance_type,model_name=model_name,lr=lr,clustering_method=clustering_method,training=training,batch_size=batch_size,n_neighbors=n_neighbors,resolution=resolution,apply_gmm=apply_gmm)
         samples_id = list(adata.uns['GMVAE_Representation'].keys())
         n_samples = len(samples_id)
         EMD = np.zeros((n_samples, n_samples))
@@ -676,7 +747,7 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
         start_time = time.time()
         # Parallelize the outer loops
         results = Parallel(n_jobs=-1)(
-            delayed(compute_emd)(i, j, samples_id, EMD, adata, compute_distance, ot, covariance_type,wass_dis,epsilon=epsilon,log=log)
+            delayed(compute_emd)(i, j, samples_id, EMD, adata, compute_distance, ot, log, covariance_type, alpha, beta, use_covariance, use_bures_wasserstein, wass_dis,epsilon=epsilon)
             for i in range(n_samples) for j in range(i + 1, n_samples)  # Only compute for j > i to avoid duplicates
         )
 
@@ -698,6 +769,7 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
 
     else:
         EMD=adata.uns['EMD']
+        
    
     #Computing clusters and then ARI
     if return_sil_ari:
@@ -710,69 +782,96 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
     else:
         adata.uns['real_labels']=return_real_labels(annot)
         
-    
+    elapsed_time = time.time() - start_time
     annot= adata.uns['annot']
-    #annot['component_assignment']=list(adata.obs['component_assignment'])
+    annot[annot.columns[0]]=list(adata.obs[clusters_col])
     proportions = Cluster_Representations(annot)
     adata.uns['proportions'] = proportions
-   
+    #print(f"Time taken for the ot part: {elapsed_time:.2f} seconds")
 
-
-                                  
       
 
-def gmmvae_Representation(adata, num_components=5,sample_col='sampleID',
-                                        covariance_type='full',
-                                        n_neighbors=15,resolution=0.5):
-    
+def Gaussian_Mixture_VAE_Representation(adata, num_components=5, hidden_dim=5, num_epochs=100,dirich=True, patience=10, alpha=None,sample_col='sampleID',
+                                        covariance_type='full',model_name='model',training=True,batch_size=None,lr=1e-3,
+                                        clustering_method='gmm',n_neighbors=15,resolution=0.5, apply_gmm=False,random_state=0):
     """
-    Generates Gaussian Mixture Model (GMM) representations (means, covariances, and weights) for each sample in the dataset, based on their PCA features and component assignments.
+    Computes the Gaussian Mixture Variational Autoencoder (GMVAE) representation for each sample in an AnnData object.
 
     Args:
     - adata (AnnData): 
-        Annotated data object containing single-cell or similar data. The function assumes that the PCA features are stored 
-        in `adata.uns['Datafame']`, and `adata.obsm['weights']` contains the mixing weights.
+        An AnnData object containing transcriptomic data and precomputed PCA embeddings.
 
     - num_components (int, optional): 
-        Number of components (clusters) in the Gaussian Mixture Model (default: `5`).
+        Number of Gaussian components in the mixture model. Default is 5.
+
+    - hidden_dim (int, optional): 
+        Dimensionality of the hidden layers in the GMVAE model. Default is 5.
+
+    - num_epochs (int, optional): 
+        Number of training epochs for GMVAE. Default is 100.
+
+    - dirich (bool, optional): 
+        Whether to use Dirichlet priors in GMVAE training. Default is True.
+
+    - patience (int, optional): 
+        Number of epochs for early stopping if no improvement. Default is 10.
+
+    - alpha (float, optional): 
+        Dirichlet prior concentration parameter. Default is None.
 
     - sample_col (str, optional): 
-        Column in `adata.obs` that identifies samples (default: `'sampleID'`).
+        The column name in `adata.obs` that contains sample IDs. Default is 'sampleID'.
 
     - covariance_type (str, optional): 
-        Type of covariance to compute for the GMM. Options:
-        - `'diag'`: Diagonal covariance matrix.
-        - `'full'`: Full covariance matrix (default).
+        Specifies the type of covariance matrix. Accepted values:
+        - 'diag': Diagonal covariance matrices.
+        - 'full': Full covariance matrices.
+        Default is 'full'.
+
+    - model_name (str, optional): 
+        Name of the GMVAE model used for clustering. Default is 'model'.
+
+    - training (bool, optional): 
+        Whether to train the GMVAE model. Default is True.
+
+    - batch_size (int, optional): 
+        Batch size for GMVAE training. Default is None.
+
+    - lr (float, optional): 
+        Learning rate for GMVAE training. Default is 1e-3.
+
+    - clustering_method (str, optional): 
+        Clustering method to use. Default is 'gmm'.
 
     - n_neighbors (int, optional): 
-        Number of neighbors to consider for clustering (default: `15`).
+        Number of neighbors used in clustering. Default is 15.
 
     - resolution (float, optional): 
-        Resolution parameter for clustering methods like Louvain or Leiden (default: `0.5`).
+        Resolution parameter for clustering. Default is 0.5.
+
+    - apply_gmm (bool, optional): 
+        Whether to apply Gaussian Mixture Model (GMM) for clustering. Default is False.
+
+    - random_state (int, optional): 
+        Random seed for reproducibility. Default is 0.
 
     Returns:
     - AnnData: 
-        The `adata` object with the following updated keys:
-        - `adata.uns['GMVAE_Representation']`: A dictionary containing GMM parameters for each sample. Each sample entry includes:
-            - `'means'`: Mean vectors for each component (shape: [num_components, input_dim]).
-            - `'covariances'`: Covariance matrices for each component:
-                - Shape: [num_components, input_dim, input_dim] for `full`.
-                - Shape: [num_components, input_dim, input_dim] (diagonal matrix) for `diag`.
-            - `'weights'`: Mixing weights (proportions) for each component (array of length `num_components`).
-            - `'proportion'`: Proportion of cells assigned to the sample.
-        - `adata.uns['proportions']`: Cluster proportions calculated using `Cluster_Representations`.
+        The modified `adata` object with updated fields:
+        - `adata.obs['component_assignment']`: Assigned components for each cell.
+        - `adata.uns['proportions']`: Cluster proportions per sample.
+        - `adata.uns['GMVAE_Representation']`: Dictionary containing means, covariances, and weights of the GMM components.
 
     Notes:
-    - The function calculates GMM parameters (means, covariances, and weights) for each sample based on their PCA-transformed data.
-    - Cells labeled as "Unknown" in the `'cell_type'` column are excluded from the computation.
-    - Component assignments for cells in each sample are updated in `adata.obs` based on `cluster_assignments`.
-
-    Assumptions:
-    - PCA-transformed data is stored in `adata.uns['Datafame']` with columns `['sampleID', <PCA_features>]`.
-    - Mixing weights are available in `adata.obsm['weights']`.
+    - The function extracts **PCA-reduced features** and groups cells into **Gaussian mixture components**.
+    - If `apply_gmm=True`, a **GMM model** is fit on the learned latent space.
+    - Computes and stores:
+      - **Means** and **covariances** for each Gaussian component.
+      - **Mixing weights** representing cluster proportions.
+    - The `GMVAE_Representation` dictionary stores the **GMM parameters** per sample.
     """
-    
-    df = adata.uns['Datafame']
+
+    df = adata.uns['Datafame_for_use']
     df = df[df['cell_type'] != 'Unknown']
     df = df.drop(['status'], axis=1)
     df = df.drop(['cell_type'], axis=1)
@@ -782,10 +881,18 @@ def gmmvae_Representation(adata, num_components=5,sample_col='sampleID',
     input_dim = pca_data.shape[1]
     sources = df['sampleID'].unique()
 
+   
+   
+    #z_latent, reconstructed_data, weights, cluster_assignments = gmvae.infer(test_loader)
 
+   # adata.obsm['z_laten'] = z_latent
     weights=adata.obsm['weights']
-    
-    cluster_assignments = adata.obs['component_assignment'] 
+    #adata.obsm['x_prim']=reconstructed_data
+    #adata.obs['cluster_assignments_by_model_before_gmm']=cluster_assignments
+    adata.obs['component_assignment'] = np.nan
+    if apply_gmm:
+        gmm_clusters = GaussianMixture(n_components=num_components, covariance_type='full', random_state=random_state)
+        cluster_assignments = gmm_clusters.fit_predict(weights)
     # Calculate means and covariances for each sample
     params = {}
     for source in sources:
@@ -833,13 +940,12 @@ def gmmvae_Representation(adata, num_components=5,sample_col='sampleID',
             }
 
     annot= adata.uns['annot']
-    #annot['component_assignment']=list(adata.obs['component_assignment'])
+    annot[annot.columns[0]]=list(adata.obs['component_assignment'])
     proportions = Cluster_Representations(annot)
     adata.uns['proportions'] = proportions
     adata.uns['GMVAE_Representation'] = params
 
     return adata
-
 
 
 def filter_cells_by_sample_and_cell_type(adata, sample_column, cell_type_column):
@@ -896,7 +1002,7 @@ def filter_cells_by_sample_and_cell_type(adata, sample_column, cell_type_column)
   
     
 def genes_selection_heatmap(
-        adata: ad.AnnData,
+        adata:  ad.AnnData,
         cell_type: str,
         filter_table_feature: str = 'R-squared',
         filter_table_feature_pval: str = 'adjusted P-value',
