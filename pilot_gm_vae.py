@@ -6,8 +6,8 @@
 PILOT-GM-VAE
 
 """
-from PILOT.tools import *
-from PILOT.plot import *
+from pilotpy.tools import *
+from pilotpy.plot import *
 import scanpy as sc
 import time
 from joblib import Parallel, delayed
@@ -21,7 +21,6 @@ import time
 from anndata import AnnData 
 import os
 import scipy.linalg as spl
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # 0 = all logs, 1 = filter out INFO logs, 2 = filter out WARNING logs, 3 = filter out ERROR logs
 import numpy as np
 from joblib import Parallel, delayed
 from numba import njit, prange
@@ -121,7 +120,7 @@ def train_gmvae(
         apply_gmm (bool): applying gmm on weights.
     
     Returns:
-       model
+       None.
 
     """
     np.random.seed(seed)
@@ -447,7 +446,7 @@ def compute_distance(k, l, m_s, m_t, C_s, C_t, covariance_type, log=False,epsilo
 
 
 
-def compute_emd(i, j, samples_id, EMD, adata, compute_distance, ot, log, covariance_type, alpha, beta, use_covariance, use_bures_wasserstein, wass_dis,epsilon = 1e-3):
+def compute_emd(i, j, samples_id, EMD, adata, compute_distance, log, covariance_type, wass_dis,epsilon = 1e-3):
     
     """
     Computes the Earth Mover's Distance (EMD) between two GMM representations in single-cell data.
@@ -472,9 +471,6 @@ def compute_emd(i, j, samples_id, EMD, adata, compute_distance, ot, log, covaria
     - compute_distance (function): 
         A function that computes pairwise distances between GMM components using a specified metric.
 
-    - ot (module): 
-        Optimal Transport (OT) library used for EMD computation.
-
     - log (bool): 
         If True, enables logging of intermediate steps in distance computation.
 
@@ -482,19 +478,6 @@ def compute_emd(i, j, samples_id, EMD, adata, compute_distance, ot, log, covaria
         Specifies the type of covariance matrix. Accepted values are:
         - 'diag': Indicates diagonal covariance matrices.
         - 'full': Indicates full covariance matrices.
-
-    - alpha (float): 
-        Unused parameter (potentially for regularization or weighting).
-
-    - beta (float): 
-        Unused parameter (potentially for regularization or weighting).
-
-    - use_covariance (bool): 
-        Unused parameter (potentially for including covariance information in the computation).
-
-    - use_bures_wasserstein (bool): 
-        Unused parameter (potentially for using the Bures-Wasserstein distance instead of a standard metric).
-
     - wass_dis (float): 
         Unused parameter (potentially for storing Wasserstein distance results).
 
@@ -562,12 +545,10 @@ def compute_emd(i, j, samples_id, EMD, adata, compute_distance, ot, log, covaria
 def gmmvae_wasserstein_distance(adata,emb_matrix='X_PCA',
 clusters_col='component_assignment',sample_col='sampleID',status='status',
                               metric='cosine',
-                                dirich=True,
-                                model_name='model',
                                regulizer=0.2,normalization=True,
                                regularized='unreg',reg=0.1,
-                               res=0.01,lr=1e-6,steper=0.01,data_type='scRNA',
-                                return_sil_ari=False,training=True,num_components=4,random_state=2,hidden_dim=5,batch_size=None,num_epoc=50,covariance_type='full',clustering_method='gmm',min_samples_for_gmm=0,wass_dis=True,epsilon = 1e-4,use_covariance=True,alpha=1, beta=0.2,use_bures_wasserstein=True,log=False,alpha_dirichlet=None,n_neighbors=15,resolution=0.5,apply_gmm=False):
+                               res=0.01,steper=0.01,data_type='scRNA',
+                                return_sil_ari=False,num_components=4,random_state=2,covariance_type='full',wass_dis=True,epsilon = 1e-4,log=False,apply_gmm=False):
     
     
     """
@@ -593,12 +574,6 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
     - metric (str, optional): 
         The distance metric to be used in clustering. Default is 'cosine'.
 
-    - dirich (bool, optional): 
-        Whether to use Dirichlet priors in GMVAE. Default is True.
-
-    - model_name (str, optional): 
-        Name of the GMVAE model used for clustering. Default is 'model'.
-
     - regulizer (float, optional): 
         Regularization strength for GMVAE. Default is 0.2.
 
@@ -614,9 +589,6 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
     - res (float, optional): 
         Resolution parameter for clustering. Default is 0.01.
 
-    - lr (float, optional): 
-        Learning rate for GMVAE training. Default is 1e-6.
-
     - steper (float, optional): 
         Step size for clustering. Default is 0.01.
 
@@ -626,32 +598,14 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
     - return_sil_ari (bool, optional): 
         Whether to compute silhouette and ARI scores for clustering. Default is False.
 
-    - training (bool, optional): 
-        Whether to train the GMVAE model. Default is True.
-
     - num_components (int, optional): 
         Number of Gaussian components in GMVAE. Default is 4.
 
     - random_state (int, optional): 
         Random seed for reproducibility. Default is 2.
 
-    - hidden_dim (int, optional): 
-        Dimensionality of hidden layers in GMVAE. Default is 5.
-
-    - batch_size (int, optional): 
-        Batch size for GMVAE training. Default is None.
-
-    - num_epoc (int, optional): 
-        Number of epochs for GMVAE training. Default is 50.
-
     - covariance_type (str, optional): 
         Type of covariance used in GMM ('full' or 'diag'). Default is 'full'.
-
-    - clustering_method (str, optional): 
-        The clustering method used ('gmm' or other). Default is 'gmm'.
-
-    - min_samples_for_gmm (int, optional): 
-        Minimum samples required for GMM clustering. Default is 0.
 
     - wass_dis (bool, optional): 
         Whether to compute Wasserstein distance. Default is True.
@@ -659,29 +613,8 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
     - epsilon (float, optional): 
         Small numerical stability parameter. Default is 1e-4.
 
-    - use_covariance (bool, optional): 
-        Whether to include covariance information in calculations. Default is True.
-
-    - alpha (float, optional): 
-        Alpha parameter for GMVAE training. Default is 1.
-
-    - beta (float, optional): 
-        Beta parameter for GMVAE training. Default is 0.2.
-
-    - use_bures_wasserstein (bool, optional): 
-        Whether to use Bures-Wasserstein distance. Default is True.
-
     - log (bool, optional): 
         If True, enables logging for distance computation. Default is False.
-
-    - alpha_dirichlet (float, optional): 
-        Alpha parameter for Dirichlet priors. Default is None.
-
-    - n_neighbors (int, optional): 
-        Number of neighbors for clustering. Default is 15.
-
-    - resolution (float, optional): 
-        Resolution parameter for clustering. Default is 0.5.
 
     - apply_gmm (bool, optional): 
         Whether to apply GMM for clustering. Default is False.
@@ -730,7 +663,7 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
         #combined_pca_df.columns[-3:]=['cell_type','sampleID','status']
     adata.uns['Datafame_for_use'] = combined_pca_df
     if wass_dis:
-        Gaussian_Mixture_VAE_Representation(adata, random_state=random_state,num_components=num_components,hidden_dim=hidden_dim, dirich=dirich,num_epochs=num_epoc,alpha=alpha_dirichlet,sample_col=sample_col,covariance_type=covariance_type,model_name=model_name,lr=lr,clustering_method=clustering_method,training=training,batch_size=batch_size,n_neighbors=n_neighbors,resolution=resolution,apply_gmm=apply_gmm)
+        gaussian_mixture_vae_representation(adata,num_components=num_components,sample_col=sample_col,covariance_type=covariance_type,random_state=random_state,apply_gmm=apply_gmm)
         samples_id = list(adata.uns['GMVAE_Representation'].keys())
         n_samples = len(samples_id)
         EMD = np.zeros((n_samples, n_samples))
@@ -747,7 +680,7 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
         start_time = time.time()
         # Parallelize the outer loops
         results = Parallel(n_jobs=-1)(
-            delayed(compute_emd)(i, j, samples_id, EMD, adata, compute_distance, ot, log, covariance_type, alpha, beta, use_covariance, use_bures_wasserstein, wass_dis,epsilon=epsilon)
+            delayed(compute_emd)(i, j, samples_id, EMD, adata, compute_distance, log, covariance_type,wass_dis,epsilon=epsilon)
             for i in range(n_samples) for j in range(i + 1, n_samples)  # Only compute for j > i to avoid duplicates
         )
 
@@ -791,9 +724,9 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
 
       
 
-def Gaussian_Mixture_VAE_Representation(adata, num_components=5, hidden_dim=5, num_epochs=100,dirich=True, patience=10, alpha=None,sample_col='sampleID',
-                                        covariance_type='full',model_name='model',training=True,batch_size=None,lr=1e-3,
-                                        clustering_method='gmm',n_neighbors=15,resolution=0.5, apply_gmm=False,random_state=0):
+def gaussian_mixture_vae_representation(adata, num_components=5,patience=10,sample_col='sampleID',
+                                        covariance_type='full',
+                                       apply_gmm=False,random_state=0):
     """
     Computes the Gaussian Mixture Variational Autoencoder (GMVAE) representation for each sample in an AnnData object.
 
@@ -804,20 +737,8 @@ def Gaussian_Mixture_VAE_Representation(adata, num_components=5, hidden_dim=5, n
     - num_components (int, optional): 
         Number of Gaussian components in the mixture model. Default is 5.
 
-    - hidden_dim (int, optional): 
-        Dimensionality of the hidden layers in the GMVAE model. Default is 5.
-
-    - num_epochs (int, optional): 
-        Number of training epochs for GMVAE. Default is 100.
-
-    - dirich (bool, optional): 
-        Whether to use Dirichlet priors in GMVAE training. Default is True.
-
     - patience (int, optional): 
         Number of epochs for early stopping if no improvement. Default is 10.
-
-    - alpha (float, optional): 
-        Dirichlet prior concentration parameter. Default is None.
 
     - sample_col (str, optional): 
         The column name in `adata.obs` that contains sample IDs. Default is 'sampleID'.
@@ -827,28 +748,6 @@ def Gaussian_Mixture_VAE_Representation(adata, num_components=5, hidden_dim=5, n
         - 'diag': Diagonal covariance matrices.
         - 'full': Full covariance matrices.
         Default is 'full'.
-
-    - model_name (str, optional): 
-        Name of the GMVAE model used for clustering. Default is 'model'.
-
-    - training (bool, optional): 
-        Whether to train the GMVAE model. Default is True.
-
-    - batch_size (int, optional): 
-        Batch size for GMVAE training. Default is None.
-
-    - lr (float, optional): 
-        Learning rate for GMVAE training. Default is 1e-3.
-
-    - clustering_method (str, optional): 
-        Clustering method to use. Default is 'gmm'.
-
-    - n_neighbors (int, optional): 
-        Number of neighbors used in clustering. Default is 15.
-
-    - resolution (float, optional): 
-        Resolution parameter for clustering. Default is 0.5.
-
     - apply_gmm (bool, optional): 
         Whether to apply Gaussian Mixture Model (GMM) for clustering. Default is False.
 
