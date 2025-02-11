@@ -726,7 +726,7 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
 
 def gaussian_mixture_vae_representation(adata, num_components=5,patience=10,sample_col='sampleID',
                                         covariance_type='full',
-                                       apply_gmm=False,random_state=0):
+                                       apply_gmm=True,random_state=0):
     """
     Computes the Gaussian Mixture Variational Autoencoder (GMVAE) representation for each sample in an AnnData object.
 
