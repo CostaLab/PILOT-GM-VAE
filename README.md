@@ -20,6 +20,7 @@ conda create --name PILOT-GM-VAE python=3.11.5 r-base
 conda activate PILOT-GM-VAE
 
 conda install -c conda-forge suitesparse
+
 conda install -c conda-forge pygraphviz
 
 pip install .
