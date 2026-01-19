@@ -1,11 +1,11 @@
 
 [![GitHub license](https://img.shields.io/github/license/CostaLab/PILOT.svg)](https://github.com/CostaLab/PILOT?tab=MIT-1-ov-file#MIT-1-ov-file)
 
-### PILOT-GM-VAE
+### PILOT-GM-VAE [Paper](https://academic.oup.com/bib/article/26/5/bbaf547/8287234).
+
 
 Patient-Level Analysis of Single Cell Disease Atlas with Optimal Transport of Gaussian Mixtures Variational Autoencoders.
-We introduce here PatIent-Level Analysis with Optimal Transport based on Gausian Mixture  Variational AutoEncoders. PILOT-GM-VAE explores the power of GM-VAE to estimate models describing complex single cell distributions with efficient optimal transport algorithms for estimating the distance between GMs. [Paper](https://academic.oup.com/bib/article/26/5/bbaf547/8287234).
-
+We introduce here PatIent-Level Analysis with Optimal Transport based on Gausian Mixture  Variational AutoEncoders. PILOT-GM-VAE explores the power of GM-VAE to estimate models describing complex single cell distributions with efficient optimal transport algorithms for estimating the distance between GMs. 
 
 
 
