@@ -21,6 +21,7 @@ import time
 from anndata import AnnData 
 import os
 import scipy.linalg as spl
+#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # 0 = all logs, 1 = filter out INFO logs, 2 = filter out WARNING logs, 3 = filter out ERROR logs
 import numpy as np
 from joblib import Parallel, delayed
 from numba import njit, prange
@@ -34,7 +35,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
 import random
-from torchvision import datasets, transforms
+#from torchvision import datasets, transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 import torch.utils.data
 from scipy.io import loadmat
@@ -82,7 +83,7 @@ def train_gmvae(
     verbose=0,
     save_model=True,
     load_weights=False,
-    apply_gmm=True,
+   
 ):
     """
     Train or load a GMVAE model, save it to a folder, and optionally perform inference.
@@ -117,7 +118,6 @@ def train_gmvae(
         verbose (int): Verbosity level.
         save_model (bool): Save the model after training.
         load_weights (bool): Load pre-trained weights if available.
-        apply_gmm (bool): applying gmm on weights.
     
     Returns:
        None.
@@ -224,11 +224,11 @@ def train_gmvae(
    
     print("Performing inference...")
     z_latent, x_recon, cluster_probs, clusters = gmvae.infer(whole_loader)
-    if apply_gmm:
-        gmm_clusters = GaussianMixture(n_components=num_classes)
-        cluster_assignments = gmm_clusters.fit_predict(cluster_probs)
-        adata.obs['component_assignment'] = cluster_assignments+1
-        adata.obs['component_assignment'] = adata.obs['component_assignment'].astype(str)
+    #if apply_gmm:
+    gmm_clusters = GaussianMixture(n_components=num_classes)
+    cluster_assignments = gmm_clusters.fit_predict(cluster_probs)
+    adata.obs['component_assignment'] = cluster_assignments+1
+    adata.obs['component_assignment'] = adata.obs['component_assignment'].astype(int)
     adata.obsm['z_laten'] = z_latent
     adata.obsm['weights'] = cluster_probs
     adata.obsm['x_prim']=x_recon
@@ -548,7 +548,7 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
                                regulizer=0.2,normalization=True,
                                regularized='unreg',reg=0.1,
                                res=0.01,steper=0.01,data_type='scRNA',
-                                return_sil_ari=False,num_components=4,random_state=2,covariance_type='full',wass_dis=True,epsilon = 1e-4,log=False,apply_gmm=False):
+                                return_sil_ari=False,num_components=4,random_state=2,covariance_type='full',wass_dis=True,epsilon = 1e-4,log=False):
     
     
     """
@@ -616,9 +616,6 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
     - log (bool, optional): 
         If True, enables logging for distance computation. Default is False.
 
-    - apply_gmm (bool, optional): 
-        Whether to apply GMM for clustering. Default is False.
-
     Returns:
     - None: 
         Stores computed **Wasserstein distances (EMD)** and **clustering results** in `adata.uns`.
@@ -631,7 +628,7 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
     """
 
 
-
+  
     if data_type=='scRNA':
         data,annot=extract_data_anno_scRNA_from_h5ad(adata,emb_matrix=emb_matrix,
         clusters_col=clusters_col,sample_col=sample_col,status=status)
@@ -663,7 +660,10 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
         #combined_pca_df.columns[-3:]=['cell_type','sampleID','status']
     adata.uns['Datafame_for_use'] = combined_pca_df
     if wass_dis:
-        gaussian_mixture_vae_representation(adata,num_components=num_components,sample_col=sample_col,covariance_type=covariance_type,random_state=random_state,apply_gmm=apply_gmm)
+        num_components = np.unique(
+    np.asarray(adata.obs['component_assignment']).astype(int)
+).size
+        gaussian_mixture_vae_representation(adata,num_components=num_components,sample_col=sample_col,covariance_type=covariance_type,random_state=random_state)
         samples_id = list(adata.uns['GMVAE_Representation'].keys())
         n_samples = len(samples_id)
         EMD = np.zeros((n_samples, n_samples))
@@ -726,7 +726,7 @@ clusters_col='component_assignment',sample_col='sampleID',status='status',
 
 def gaussian_mixture_vae_representation(adata, num_components=5,patience=10,sample_col='sampleID',
                                         covariance_type='full',
-                                       apply_gmm=True,random_state=0):
+                                       random_state=0):
     """
     Computes the Gaussian Mixture Variational Autoencoder (GMVAE) representation for each sample in an AnnData object.
 
@@ -748,9 +748,6 @@ def gaussian_mixture_vae_representation(adata, num_components=5,patience=10,samp
         - 'diag': Diagonal covariance matrices.
         - 'full': Full covariance matrices.
         Default is 'full'.
-    - apply_gmm (bool, optional): 
-        Whether to apply Gaussian Mixture Model (GMM) for clustering. Default is False.
-
     - random_state (int, optional): 
         Random seed for reproducibility. Default is 0.
 
@@ -761,13 +758,7 @@ def gaussian_mixture_vae_representation(adata, num_components=5,patience=10,samp
         - `adata.uns['proportions']`: Cluster proportions per sample.
         - `adata.uns['GMVAE_Representation']`: Dictionary containing means, covariances, and weights of the GMM components.
 
-    Notes:
-    - The function extracts **PCA-reduced features** and groups cells into **Gaussian mixture components**.
-    - If `apply_gmm=True`, a **GMM model** is fit on the learned latent space.
-    - Computes and stores:
-      - **Means** and **covariances** for each Gaussian component.
-      - **Mixing weights** representing cluster proportions.
-    - The `GMVAE_Representation` dictionary stores the **GMM parameters** per sample.
+   
     """
 
     df = adata.uns['Datafame_for_use']
@@ -780,19 +771,8 @@ def gaussian_mixture_vae_representation(adata, num_components=5,patience=10,samp
     input_dim = pca_data.shape[1]
     sources = df['sampleID'].unique()
 
-   
-   
-    #z_latent, reconstructed_data, weights, cluster_assignments = gmvae.infer(test_loader)
-
-   # adata.obsm['z_laten'] = z_latent
+    cluster_assignments=adata.obs['component_assignment'] 
     weights=adata.obsm['weights']
-    #adata.obsm['x_prim']=reconstructed_data
-    #adata.obs['cluster_assignments_by_model_before_gmm']=cluster_assignments
-    adata.obs['component_assignment'] = np.nan
-    if apply_gmm:
-        gmm_clusters = GaussianMixture(n_components=num_components, covariance_type='full', random_state=random_state)
-        cluster_assignments = gmm_clusters.fit_predict(weights)
-    # Calculate means and covariances for each sample
     params = {}
     for source in sources:
         data = df[df['sampleID'] == source]
@@ -1464,7 +1444,7 @@ def go_enrichment_heatmap(adata, num_gos=10, fontsize=16, figsize=(15, 12), cmap
     plt.ylabel('GO Terms', fontsize=fontsize)
     
     # Save heatmap
-    plt.savefig(f"{path}GO_Enrichment_Heatmap.png", bbox_inches=bbox_inches, facecolor=facecolor, transparent=transparent)
+    plt.savefig(f"{path}GO_Enrichment_Heatmap.pdf", bbox_inches=bbox_inches, facecolor=facecolor, transparent=transparent)
     plt.show()
 
     
