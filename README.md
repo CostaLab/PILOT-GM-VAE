@@ -16,11 +16,9 @@ git clone https://github.com/CostaLab/PILOT-GM-VAE.git
 
 cd PILOT-GM-VAE
 
-conda create --name PILOT-GM-VAE python=3.11.5 r-base
+conda create --name PILOT-GM-VAE python=3.14.3 
 
 conda activate PILOT-GM-VAE
-
-conda install -c conda-forge suitesparse pygraphviz
 
 pip install .
 ```
