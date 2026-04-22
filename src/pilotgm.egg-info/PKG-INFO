@@ -1,3 +1,29 @@
+Metadata-Version: 2.4
+Name: pilotgm
+Version: 0.1.1
+Summary: Patient-Level Analysis of Single Cell Disease Atlas with Optimal Transport of Gaussian Mixtures Variational Autoencoders
+Home-page: https://github.com/CostaLab/PILOT-GM-VAE
+Author: Mehdi Joodaki
+Author-email: judakimehdi@gmail.com
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: torch
+Requires-Dist: pilotpy
+Requires-Dist: scanpy
+Requires-Dist: joblib
+Requires-Dist: tqdm
+Requires-Dist: numba
+Dynamic: author
+Dynamic: author-email
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
 
 [![GitHub license](https://img.shields.io/github/license/CostaLab/PILOT.svg)](https://github.com/CostaLab/PILOT?tab=MIT-1-ov-file#MIT-1-ov-file)
 
