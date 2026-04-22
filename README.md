@@ -16,7 +16,7 @@ git clone https://github.com/CostaLab/PILOT-GM-VAE.git
 
 cd PILOT-GM-VAE
 
-conda create --name PILOT-GM-VAE python=3.14.3 
+conda create --name PILOT-GM-VAE python
 
 conda activate PILOT-GM-VAE
 

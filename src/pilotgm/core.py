@@ -21,7 +21,6 @@ import time
 from anndata import AnnData 
 import os
 import scipy.linalg as spl
-#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # 0 = all logs, 1 = filter out INFO logs, 2 = filter out WARNING logs, 3 = filter out ERROR logs
 import numpy as np
 from joblib import Parallel, delayed
 from numba import njit, prange
@@ -35,12 +34,10 @@ import torch.optim as optim
 import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
 import random
-#from torchvision import datasets, transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 import torch.utils.data
 from scipy.io import loadmat
-from model.GMVAE import *
-from model.GMVAE import GMVAE
+from .model.GMVAE import *
 import matplotlib.pyplot as plt
 import scanpy as sc
 import torch
