@@ -7,3 +7,24 @@ __pycache__/
 # Optional: Exclude compiled Python files
 *.pyc
 *.pyo
+
+*.swp
+*.swo
+*.egg-info/
+
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+*.git
+**/__pycache__/
+.git/
+*/cells.tar.gz/*
+
+*/cells/*
+
+__pycache__/
+
+build/
+dist/
+.venv/
+.env
+.pytest_cache/
