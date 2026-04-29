@@ -33,4 +33,16 @@ Then please use the provided Tutorial.
 You can access the used data sets by PILOT-GM-VAE in Part 1 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4740646.svg)](https://zenodo.org/records/8370081), Part 2 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4740646.svg)](https://zenodo.org/records/7957118) and Part 3 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4740646.svg)](https://zenodo.org/records/14615923)
 
-
+## Citation
+```
+@article{joodaki2025pilot,
+  title={PILOT-GM-VAE: patient-level analysis of single-cell disease atlas with optimal transport of Gaussian mixture variational autoencoders},
+  author={Joodaki, Mehdi and Shaigan, Mina and Samiei, Samaneh and Nagai, James and Mai{\'e}, Tiago and Kuppe, Christoph and Costa, Ivan G},
+  journal={Briefings in Bioinformatics},
+  volume={26},
+  number={5},
+  pages={bbaf547},
+  year={2025},
+  publisher={Oxford University Press}
+}
+```
