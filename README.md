@@ -1,7 +1,7 @@
 
 [![GitHub license](https://img.shields.io/github/license/CostaLab/PILOT.svg)](https://github.com/CostaLab/PILOT?tab=MIT-1-ov-file#MIT-1-ov-file)
 
-### PILOT-GM-VAE  ([Paper](https://academic.oup.com/bib/article/26/5/bbaf547/8287234))
+# PILOT-GM-VAE  <img src="img/logo.png" align="right" width="300" /> ([Paper](https://academic.oup.com/bib/article/26/5/bbaf547/8287234))
 
 
 Patient-Level Analysis of Single Cell Disease Atlas with Optimal Transport of Gaussian Mixtures Variational Autoencoders.
