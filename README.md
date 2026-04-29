@@ -11,18 +11,20 @@ We introduce here PatIent-Level Analysis with Optimal Transport based on Gausian
 
 ![plot](./img/plot1.png)
 
+### Installation
+
 ```terminal
 pip install pilotgm
 ```
 
 ### Navigate to Tutorial.
 
-Then please use the provided Tutorial.
-
 ```terminal
 git clone https://github.com/CostaLab/PILOT-GM-VAE.git
 cd PILOT-GM-VAE
 ```
+Then please use the provided Tutorial.
+
 ### Data sets
 
 You can access the used data sets by PILOT-GM-VAE in Part 1 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4740646.svg)](https://zenodo.org/records/8370081), Part 2 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4740646.svg)](https://zenodo.org/records/7957118) and Part 3 
