@@ -6,49 +6,47 @@
 PILOT-GM-VAE
 
 """
-from pilotpy.tools import *
-from pilotpy.plot import *
-import scanpy as sc
-import time
-from joblib import Parallel, delayed
-from sklearn.cluster import KMeans
-from sklearn.mixture import GaussianMixture
-from tqdm import tqdm
-import random
-import numpy as np
-import torch
-import time
-from anndata import AnnData 
 import os
-import scipy.linalg as spl
-import numpy as np
-from joblib import Parallel, delayed
-from numba import njit, prange
-import scipy.linalg
+import random
+import time
 import warnings
-warnings.filterwarnings('ignore', category=UserWarning)
-warnings.filterwarnings("ignore", category=RuntimeWarning)
+from argparse import Namespace
+
+import numpy as np
+import pandas as pd
+import scipy.linalg as spl
+from scipy.io import loadmat
+
+from sklearn.cluster import KMeans
 from sklearn.covariance import LedoitWolf
+from sklearn.mixture import GaussianMixture
+from sklearn.model_selection import train_test_split
+
+import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from sklearn.model_selection import train_test_split
-import random
-from torch.utils.data.sampler import SubsetRandomSampler
 import torch.utils.data
-from scipy.io import loadmat
-from .model.GMVAE import *
-import matplotlib.pyplot as plt
-import scanpy as sc
-import torch
 from torch.utils.data import DataLoader, TensorDataset, SubsetRandomSampler
-from argparse import Namespace
-import os
-import pandas as pd
+
+import anndata as ad
+from anndata import AnnData
+import scanpy as sc
+
+from joblib import Parallel, delayed
+from numba import njit, prange
+from tqdm import tqdm
+
 import matplotlib.pyplot as plt
 import seaborn as sns
-import scanpy as sc
-import anndata as ad
+
+from pilotpy.plot import *
+from pilotpy.tools import *
+
+from pilotgm.model import GMVAE
+
+warnings.filterwarnings('ignore', category=UserWarning)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 def train_gmvae(
     adata,
@@ -231,11 +229,6 @@ def train_gmvae(
     adata.obsm['x_prim']=x_recon
     adata.obs['cluster_assignments_by_model_before_gmm']=cluster_assignments
     print("Done!")
-   
-
-
-
-
 
 
 def plot_umap_and_stacked_bar(
@@ -442,7 +435,6 @@ def compute_distance(k, l, m_s, m_t, C_s, C_t, covariance_type, log=False,epsilo
     return bures_wasserstein
 
 
-
 def compute_emd(i, j, samples_id, EMD, adata, compute_distance, log, covariance_type, wass_dis,epsilon = 1e-3):
     
     """
@@ -536,7 +528,6 @@ def compute_emd(i, j, samples_id, EMD, adata, compute_distance, log, covariance_
     EMD[j, i] = w_d
 
     return (i, j, w_d)  # Return the result to update the matrix later
-
 
 
 def gmmvae_wasserstein_distance(adata,emb_matrix='X_PCA',

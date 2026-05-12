@@ -1,1 +1,1 @@
-from .LossFunctions import *
+from .LossFunctions import LossFunctions

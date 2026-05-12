@@ -12,10 +12,10 @@ Gaussian Mixture Variational Autoencoder for Unsupervised Clustering
 import torch
 import numpy as np
 from torch import nn, optim
-from torch.utils.data.sampler import SubsetRandomSampler
-from networks.Networks import *
-from losses.LossFunctions import *
-from metrics.Metrics import *
+from torch.utils.data import SubsetRandomSampler
+from pilotgm.networks import GMVAENet
+from pilotgm.losses import LossFunctions
+from pilotgm.metrics import Metrics
 import matplotlib.pyplot as plt
 
 class GMVAE:

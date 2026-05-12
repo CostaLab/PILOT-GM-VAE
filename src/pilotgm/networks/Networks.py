@@ -11,7 +11,7 @@ import torch
 import torch.nn.init as init
 from torch import nn
 from torch.nn import functional as F
-from networks.Layers import *
+from .Layers import Flatten, Reshape, GumbelSoftmax, Gaussian
 
 # Inference Network
 class InferenceNet(nn.Module):

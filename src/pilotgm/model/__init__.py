@@ -1,2 +1,2 @@
-from .GMVAE import *
+from .GMVAE import GMVAE
 
